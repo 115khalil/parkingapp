@@ -149,8 +149,8 @@ class _ContactUsPageState extends State<ContactUsPage> {
                   padding:
                       EdgeInsets.all(20.0), // Add padding inside the container
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(
-                        0.8), // Make the container semi-transparent
+                    color: Color.fromARGB(255, 215, 212,
+                        212), // Make the container semi-transparent
                     borderRadius:
                         BorderRadius.circular(10.0), // Add rounded corners
                     border: Border.all(

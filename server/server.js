@@ -5,8 +5,8 @@ const jwt = require("jsonwebtoken");
 const { Resend } = require('resend');
 const session = require('express-session');
 const allowedOrigins = [
-  'http://localhost:53530',
-  'http://localhost:3000', // Add more origins as needed
+  'http://localhost:51066',
+  'http://localhost:64294', // Add more origins as needed
   'http://localhost:4200'
 ];
 app.use(session({

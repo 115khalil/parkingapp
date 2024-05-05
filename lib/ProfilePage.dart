@@ -9,17 +9,26 @@ class ProfilePage extends StatefulWidget {
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   final storage = FlutterSecureStorage();
   Map<String, dynamic> user = {};
   List<dynamic> bookings = [];
   List<dynamic> contacts = [];
   bool isLoading = true;
+  TabController? _tabController;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -99,48 +108,77 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Center(
-                      child: Text('Welcome ${user['fullname'] ?? ''}',
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Welcome ${user['fullname'] ?? ''}',
                           style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold)),
-                    ),
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text('Email: ${user['email'] ?? ''}',
+                          style: TextStyle(fontSize: 16)),
+                    ],
                   ),
-                  Divider(),
-                  ...bookings
-                      .map((booking) => ListTile(
-                            title: Text(booking['title'],
-                                style: TextStyle(color: Colors.black87)),
-                            subtitle: Text(
-                                'From ${booking['bookingStartDate']} to ${booking['bookingEndDate']}',
-                                style: TextStyle(color: Colors.grey)),
-                            trailing: IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteBooking(booking['_id']),
-                            ),
-                          ))
-                      .toList(),
-                  Divider(),
-                  ...contacts
-                      .map((contact) => ListTile(
-                            title: Text(contact['message'],
-                                style: TextStyle(color: Colors.black87)),
-                            subtitle: Text(contact['createdAt'],
-                                style: TextStyle(color: Colors.grey)),
-                            trailing: IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteContact(contact['_id']),
-                            ),
-                          ))
-                      .toList(),
-                ],
-              ),
+                ),
+                TabBar(
+                  controller: _tabController,
+                  tabs: [
+                    Tab(text: 'Reservation History'),
+                    Tab(text: 'Contact Us History'),
+                  ],
+                  indicatorColor: Colors.deepPurple,
+                  labelColor: Colors.deepPurple,
+                  unselectedLabelColor: Colors.grey,
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildReservationList(),
+                      _buildContactList(),
+                    ],
+                  ),
+                ),
+              ],
             ),
+    );
+  }
+
+  Widget _buildReservationList() {
+    return ListView(
+      children: bookings
+          .map((booking) => ListTile(
+                title: Text(booking['title'],
+                    style: TextStyle(color: Colors.black87)),
+                subtitle: Text(
+                    'From ${booking['bookingStartDate']} to ${booking['bookingEndDate']}',
+                    style: TextStyle(color: Colors.grey)),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _deleteBooking(booking['_id']),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildContactList() {
+    return ListView(
+      children: contacts
+          .map((contact) => ListTile(
+                title: Text(contact['message'],
+                    style: TextStyle(color: Colors.black87)),
+                subtitle: Text(contact['createdAt'],
+                    style: TextStyle(color: Colors.grey)),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _deleteContact(contact['_id']),
+                ),
+              ))
+          .toList(),
     );
   }
 
