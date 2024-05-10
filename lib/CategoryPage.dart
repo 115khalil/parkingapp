@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:parking/PaymentPage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:parking/component/PlanBox.dart'; // Ensure this is the correct path
 
 class CategoryPage extends StatefulWidget {
@@ -24,42 +25,61 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  String? token;
-  String? storedBooking;
+  double? ecoPrice;
+  double? luxPrice;
+  double? handPrice;
+  int? ecoAvailable;
+  int? luxAvailable;
+  int? handAvailable;
 
   @override
   void initState() {
     super.initState();
+    fetchParkingData();
   }
 
-  double calculatePrice(double baseRate) {
-    final diffInHours = widget.duration.inHours;
-    return diffInHours * baseRate;
+  Future<void> fetchParkingData() async {
+    try {
+      final response =
+          await http.get(Uri.parse('http://yourapi.com/api/variables'));
+
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        setState(() {
+          ecoPrice = data['ecoPrice'];
+          luxPrice = data['luxPrice'];
+          handPrice = data['handPrice'];
+          ecoAvailable = data['ecoAvailable'];
+          luxAvailable = data['luxAvailable'];
+          handAvailable = data['handAvailable'];
+        });
+      } else {
+        throw Exception('Failed to load parking data');
+      }
+    } catch (e) {
+      print('Error fetching parking data: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ecoPrice = calculatePrice(3.0); // $3 per hour
-    final luxPrice = calculatePrice(10.0); // $10 per hour
-    final handPrice = calculatePrice(5.0); // $5 per hour
-
     return Scaffold(
-      backgroundColor: Colors.white, // Set the background color to white
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('Parking Categories'),
         backgroundColor: Color(0xFF4b39ef),
       ),
       body: SingleChildScrollView(
         child: Padding(
-          // Removed the Container widget to ensure the background color is white
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               PlanBox(
                 title: "Economy Zone",
-                description: "Ideal for compact cars and motorcycles.",
-                price: ecoPrice,
+                description:
+                    "Ideal for compact cars and motorcycles. Available spots: $ecoAvailable",
+                price: ecoPrice ?? 0.0,
                 icon: Icons.directions_car,
                 selectedLocation: widget.selectedLocation,
                 licensePlate: widget.licensePlate,
@@ -69,8 +89,9 @@ class _CategoryPageState extends State<CategoryPage> {
               SizedBox(height: 20),
               PlanBox(
                 title: "Premium Zone",
-                description: "Spacious spots for SUVs and luxury vehicles.",
-                price: luxPrice,
+                description:
+                    "Spacious spots for SUVs and luxury vehicles. Available spots: $luxAvailable",
+                price: luxPrice ?? 0.0,
                 icon: Icons.local_parking,
                 selectedLocation: widget.selectedLocation,
                 licensePlate: widget.licensePlate,
@@ -80,8 +101,9 @@ class _CategoryPageState extends State<CategoryPage> {
               SizedBox(height: 20),
               PlanBox(
                 title: "Handicap Zone",
-                description: "Accessible parking for permit holders.",
-                price: handPrice,
+                description:
+                    "Accessible parking for permit holders. Available spots: $handAvailable",
+                price: handPrice ?? 0.0,
                 icon: Icons.accessible,
                 selectedLocation: widget.selectedLocation,
                 licensePlate: widget.licensePlate,
@@ -96,25 +118,43 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 }
 
+class PlanBox extends StatefulWidget {
+  final String title;
+  final String description;
+  final double price;
+  final IconData icon;
+  final String selectedLocation;
+  final String licensePlate;
+  final DateTime bookingStartDate;
+  final DateTime bookingEndDate;
+
+  PlanBox({
+    Key? key,
+    required this.title,
+    required this.description,
+    required this.price,
+    required this.icon,
+    required this.selectedLocation,
+    required this.licensePlate,
+    required this.bookingStartDate,
+    required this.bookingEndDate,
+  }) : super(key: key);
+
+  @override
+  _PlanBoxState createState() => _PlanBoxState();
+}
+
 class _PlanBoxState extends State<PlanBox> {
   String _modalMessage = '';
 
   void _handleClick() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString('title', widget.title);
-    prefs.setString('price', widget.price.toStringAsFixed(2));
-
-    setState(() {
-      _modalMessage =
-          'Price ${widget.price.toStringAsFixed(2)} will be your total price for ${widget.title}';
-    });
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Confirmation'),
-          content: Text(_modalMessage),
+          content: Text(
+              'dt${widget.price.toStringAsFixed(2)} will be your total price for ${widget.title}'),
           actions: <Widget>[
             TextButton(
               child: Text('Close'),
@@ -163,7 +203,7 @@ class _PlanBoxState extends State<PlanBox> {
               SizedBox(height: 10),
               Text(widget.description, style: TextStyle(fontSize: 16)),
               SizedBox(height: 20),
-              Text('\$${widget.price.toStringAsFixed(2)}',
+              Text('dt${widget.price.toStringAsFixed(2)}',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
