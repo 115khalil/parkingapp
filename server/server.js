@@ -4,10 +4,12 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { Resend } = require('resend');
 const session = require('express-session');
+
+
 const allowedOrigins = [
-  'http://localhost:60153',
+  'http://localhost:50297',
   'http://localhost:64294', // Add more origins as needed
-  'http://localhost:4200'
+  'http://localhost:63944'
 ];
 app.use(session({
   secret: 'your-secret-key', // Replace with your own secret key
@@ -39,6 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 const UserModel = require("./models/userModels");
 const BookingModel = require("./models/bookingModels");
 const ContactUsModel = require("./models/contactusModel");
+const Variable = require("./models/variableModels");
 // Initialize Resend instance
 const resend = new Resend('re_eNZEfFVM_CGUgGPF4R7PwHbeB2PGCST9q');
 require('dotenv').config();
@@ -862,7 +865,7 @@ app.patch('/api/variables', async (req, res) => {
   
 
     // Use a fixed id for the Variable document
-    const fixedId = '663e8a7b6d08256ef51d11a7';
+    const fixedId = '663f716275995050b1cd3bec';
 
     // Check if the Variable document already exists
     let variable = await Variable.findOne({ _id: fixedId });
@@ -907,5 +910,166 @@ app.patch('/api/variables', async (req, res) => {
     res.status(500).json({ error: 'Failed to create or update variable' });
   }
 });
+app.get('/api/variables', async (req, res) => {
+  try {
+    // Extract the fixed ID from the request parameters
+    const fixedId = '663f716275995050b1cd3bec';
+
+    // Find the Variable document by the fixed ID
+    const variable = await Variable.findOne({ _id: fixedId });
+
+    if (!variable) {
+      // If not found, respond with an appropriate message
+      return res.status(404).json({ error: 'Variable not found' });
+    }
+
+    // Respond with the found Variable document
+    res.status(200).json(variable);
+  } catch (error) {
+    console.error('Error fetching variable:', error);
+    res.status(500).json({ error: 'Failed to fetch variable' });
+  }
+});
+
+
+
+
+// POST endpoint to decrement capacity
+app.post('/api/decrement-capacity', async (req, res) => {
+  const { location, category } = req.body;
+
+  // Map location and category to the specific database field
+  const fieldMap = {
+    'Sfax': {
+      'Economy Zone': 'sfaxcapeco',
+      'Premium Zone': 'sfaxcaplux',
+      'Handicap Zone': 'sfaxcaphad'
+    },
+    'Djerba': {
+      'Economy Zone': 'djcapeco',
+      'Premium Zone': 'djcaplux',
+      'Handicap Zone': 'djcaphad'
+    }
+  };
+
+  // Check if the provided location and category are valid
+  if (!fieldMap[location] || !fieldMap[location][category]) {
+    return res.status(400).json({ error: 'Invalid location or category' });
+  }
+
+  const fieldToUpdate = fieldMap[location][category];
+
+  try {
+    // Find the Variable document and decrement the specific field
+    const updatedVariable = await Variable.findOneAndUpdate(
+      { _id: '663f716275995050b1cd3bec' }, // Assuming a fixed ID for simplicity
+      { $inc: { [fieldToUpdate]: -1 } }, // Decrement the capacity by 1
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedVariable) {
+      return res.status(404).json({ error: 'Variable not found' });
+    }
+
+    // Respond with the updated Variable document
+    res.status(200).json(updatedVariable);
+  } catch (error) {
+    console.error('Error updating variable:', error);
+    res.status(500).json({ error: 'Failed to update variable' });
+  }
+});
+
+
+app.post('/api/count-expired-reservations', async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const expiredReservations = await BookingModel.aggregate([
+      {
+        $match: {
+          bookingEndDate: { $lt: currentDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            location: '$carModel',
+            category: '$title'
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    for (const reservation of expiredReservations) {
+      const { location, category } = reservation._id;
+      const count = reservation.count;
+      await incrementCapacity(location, category, count);
+    }
+
+    res.status(200).json({ message: 'Expired reservations counted and processed' });
+  } catch (error) {
+    console.error('Error counting expired reservations:', error);
+    res.status(500).json({ error: 'Failed to count expired reservations' });
+  }
+});
+
+
+
+async function incrementCapacity(location, category, count) {
+  const fieldMap = {
+    'Sfax': {
+      'Economy Zone': 'sfaxcapeco',
+      'Premium Zone': 'sfaxcaplux',
+      'Handicap Zone': 'sfaxcaphad'
+    },
+    'Djerba': {
+      'Economy Zone': 'djcapeco',
+      'Premium Zone': 'djcaplux',
+      'Handicap Zone': 'djcaphad'
+    }
+  };
+
+  const fieldToUpdate = fieldMap[location][category];
+
+  if (!fieldToUpdate) {
+    throw new Error('Invalid location or category');
+  }
+
+  try {
+    const updatedVariable = await Variable.findOneAndUpdate(
+      { _id: '663f716275995050b1cd3bec' },
+      { $inc: { [fieldToUpdate]: count } },
+      { new: true }
+    );
+
+    if (!updatedVariable) {
+      throw new Error('Variable not found');
+    }
+
+    console.log(`Incremented capacity for ${location} - ${category} by ${count}`);
+  } catch (error) {
+    console.error('Error incrementing capacity:', error);
+    throw error;
+  }
+}
+
+
+
+
+app.delete('/api/delete-expired-reservations', async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const result = await BookingModel.deleteMany({
+      bookingEndDate: { $lt: currentDate }
+    });
+
+    res.status(200).json({ message: `Deleted ${result.deletedCount} expired reservations` });
+  } catch (error) {
+    console.error('Error deleting expired reservations:', error);
+    res.status(500).json({ error: 'Failed to delete expired reservations' });
+  }
+});
+
+
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

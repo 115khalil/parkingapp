@@ -69,6 +69,31 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Future<void> _handleBooking() async {
+    // First, decrement the capacity
+    try {
+      final decrementResponse = await http.post(
+        Uri.parse('http://localhost:5000/api/decrement-capacity'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({
+          'location': widget.selectedLocation,
+          'category': widget.title, // Assuming 'title' holds the category info
+        }),
+      );
+
+      if (decrementResponse.statusCode != 200) {
+        throw Exception('Failed to decrement capacity');
+      }
+    } catch (err) {
+      setState(() {
+        _modalMessage = "Error updating capacity: $err";
+        _isModalOpen = true;
+      });
+      return; // Stop further execution if capacity update fails
+    }
+
+    // Proceed with booking if capacity decrement is successful
     final newBooking = {
       'carModel': widget.selectedLocation,
       'licensePlate': widget.licensePlate,
@@ -111,7 +136,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Payment'),
+        title: Text('Payment', style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF4b39ef),
         elevation: 0,
       ),
