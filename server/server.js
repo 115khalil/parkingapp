@@ -4,10 +4,10 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { Resend } = require('resend');
 const session = require('express-session');
-
+const mongoose = require("mongoose");
 
 const allowedOrigins = [
-  'http://localhost:50297',
+  'http://localhost:51268',
   'http://localhost:64294', // Add more origins as needed
   'http://localhost:63944'
 ];
@@ -42,6 +42,10 @@ const UserModel = require("./models/userModels");
 const BookingModel = require("./models/bookingModels");
 const ContactUsModel = require("./models/contactusModel");
 const Variable = require("./models/variableModels");
+const ArchiveModel = require("./models/arechivemodels");
+
+
+
 // Initialize Resend instance
 const resend = new Resend('re_eNZEfFVM_CGUgGPF4R7PwHbeB2PGCST9q');
 require('dotenv').config();
@@ -486,6 +490,34 @@ app.post("/api/booking", async (req, res) => {
 
 
 
+
+app.post("/api/archive", async (req, res) => {
+  try {
+    const { email, carModel, licensePlate, bookingStartDate, bookingEndDate, price, title } = req.body;
+
+    // Prepare the booking object
+    const booking = {
+      email,
+      carModel,
+      licensePlate,
+      bookingStartDate,
+      bookingEndDate,
+      price,
+      title,
+    };
+
+    // Save booking data to the database using ArchiveModel
+    const newBooking = new ArchiveModel(booking);
+    await newBooking.save();
+
+    res.status(201).json({ message: "Booking confirmed successfully" });
+  } catch (error) {
+    console.error('Error processing booking:', error);
+    res.status(500).json({ message: "Error processing booking" });
+  }
+});
+
+
 app.get("/api/bookings", async (req, res) => {
     console.log("Bookings retrived"); // Debugging line
     try {
@@ -504,6 +536,7 @@ app.get("/api/bookings", async (req, res) => {
         res.status(500).json({ message: "Error fetching bookings" });
     }
 });
+//all booking now 
     
 app.get("/api/allbookings", async (req, res) => {
     console.log("Bookings retrieved"); // Debugging line
@@ -520,26 +553,49 @@ app.get("/api/allbookings", async (req, res) => {
         res.status(500).json({ message: "Error fetching bookings" });
     }
 });
+//archive all booking   
+app.get("/api/allbookingsarchive", async (req, res) => {
+  console.log("Bookings retrieved"); // Debugging line
+  try {
+      // Fetch all bookings from the archive table without filtering by email
+      const bookings = await ArchiveModel.find({});
 
-
-app.delete("/api/bookings/:id", async (req, res) => {
-    console.log("Booking delete request received"); // Debugging line
-    try {
-        // Extract the booking ID from the request parameters
-        const id = req.params.id; // Corrected line
-
-        // Delete the booking with the specified ID
-        await BookingModel.findByIdAndDelete(id);
-
-        res.json({
-            message: "Booking deleted successfully"
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error deleting booking" });
-    }
+      res.json({
+          bookings: bookings,
+          message: "Bookings fetched successfully from archive"
+      });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error fetching bookings from archive" });
+  }
 });
 
+app.delete("/api/bookings/:id", async (req, res) => {
+  console.log("Booking delete request received"); // Debugging line
+  try {
+      // Extract the booking ID from the request parameters
+      const id = req.params.id;
+
+      // Retrieve the booking before deletion to get the location and category
+      const booking = await BookingModel.findById(id);
+      if (!booking) {
+          return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // Delete the booking with the specified ID
+      await BookingModel.findByIdAndDelete(id);
+
+      // Increment capacity by 1 for the retrieved location and category
+      await incrementCapacity(booking.carModel, booking.title, 1);
+
+      res.json({
+          message: "Booking deleted successfully"
+      });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error deleting booking" });
+  }
+});
 
 //tsajel contact us 
 app.post("/api/contact", async (req, res) => {
