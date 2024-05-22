@@ -105,22 +105,9 @@ class _PaymentPageState extends State<PaymentPage> {
     };
 
     try {
-      final bookingResponse = await http.post(
-        Uri.parse('http://localhost:5000/api/booking'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(newBooking),
-      );
-
-      if (bookingResponse.statusCode != 200) {
-        throw Exception('Failed to book');
-      }
-
-      // After successful booking, archive the booking data
+      // First, archive the booking data
       final archiveResponse = await http.post(
-        Uri.parse(
-            'http://localhost:5000/api/archive'), // Adjust the URL as needed
+        Uri.parse('http://localhost:5000/api/archive'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -129,6 +116,19 @@ class _PaymentPageState extends State<PaymentPage> {
 
       if (archiveResponse.statusCode != 201) {
         throw Exception('Failed to archive booking');
+      }
+
+      // Then, proceed with booking
+      final bookingResponse = await http.post(
+        Uri.parse('http://localhost:5000/api/booking'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(newBooking),
+      );
+
+      if (bookingResponse.statusCode != 201) {
+        throw Exception('Failed to book');
       }
 
       setState(() {
@@ -172,9 +172,12 @@ class _PaymentPageState extends State<PaymentPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     SizedBox(height: 100),
-                    AutoSizeText('Airport parking: ${widget.selectedLocation}',
+                    AutoSizeText('Airport parking: ',
                         style: TextStyle(
                             fontSize: 24, fontWeight: FontWeight.bold)),
+                    AutoSizeText(' ${widget.selectedLocation}',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
                     SizedBox(height: 20),
                     AutoSizeText('License Plate: ${widget.licensePlate}',
                         style: TextStyle(fontSize: 20)),

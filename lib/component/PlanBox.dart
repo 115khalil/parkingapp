@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:parking/PaymentPage.dart'; // Ensure this import path is correct
-import 'package:shared_preferences/shared_preferences.dart';
 
 class PlanBox extends StatefulWidget {
   final String title;
@@ -29,8 +28,6 @@ class PlanBox extends StatefulWidget {
 }
 
 class _PlanBoxState extends State<PlanBox> {
-  String _modalMessage = '';
-
   void _handleClick() async {
     showDialog(
       context: context,

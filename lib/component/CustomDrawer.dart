@@ -18,16 +18,24 @@ class CustomDrawer extends StatelessWidget {
             ),
             child: Text(
               'Navigation',
-              style: TextStyle(
-                color: Colors.white, // Make text color white
-                fontSize: 24, // Increase font size
-              ),
-            ),
+              style: TextStyle(color: Colors.white),
+            ), // Default text color
           ),
           ListTile(
-            leading: Icon(Icons.airplanemode_active,
-                color: Color(0xFF4b39ef)), // Default icon color
-            title: const Text('Aeroports'), // Default text color
+            leading: Icon(Icons.book), // Default icon color
+            title: const Text('Reservation'), // Default text color
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => BookingPage()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.airport_shuttle), // Default icon color
+            title: const Text(
+              'Aeroports',
+            ), // Default text color
             onTap: () {
               Navigator.push(
                 context,
@@ -36,8 +44,7 @@ class CustomDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: Icon(Icons.contact_phone,
-                color: Color(0xFF4b39ef)), // Default icon color
+            leading: Icon(Icons.contact_phone), // Default icon color
             title: const Text('Contact Us'), // Default text color
             onTap: () {
               Navigator.push(
@@ -47,24 +54,12 @@ class CustomDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: Icon(Icons.help,
-                color: Color(0xFF4b39ef)), // Default icon color
+            leading: Icon(Icons.help), // Default icon color
             title: const Text('Help'), // Default text color
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => HelpPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.book,
-                color: Color(0xFF4b39ef)), // Default icon color
-            title: const Text('Reservation'), // Default text color
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => BookingPage()),
               );
             },
           ),
